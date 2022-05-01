@@ -5,12 +5,12 @@ import random
 from sys import settrace
 from matplotlib.fontconfig_pattern import generate_fontconfig_pattern
 import torch
-from torch._C import set_num_interop_threads
+from IPython.display import HTML
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.parallel
 import torch.utils.data
-from torch.utils.data import dataloader
+import matplotlib.animation as animation
 import torchvision.utils as vutils
 import torchvision
 import torchvision.transforms as transforms
@@ -23,9 +23,9 @@ SETTINGS = {
     # Root directory for dataset
     "dataroot": "data/cifar10",
     # Number of workers for dataloader
-    "workers": 2,
+    "workers": 1,
     # Batch size during training
-    "batch_size": 128,
+    "batch_size": 256,
     # Spatial size of training images. All images will be resized to this
     #   size using a transformer.
     "image_size": 64,
@@ -38,7 +38,7 @@ SETTINGS = {
     # Size of feature maps in discriminator
     "ndf": 64,
     # Number of training epochs
-    "num_epochs": 5,
+    "num_epochs": 1,
     # Learning rate for optimizers
     "lr": 2e-4,
     # Beta1 hyperparam for Adam optimizers
@@ -209,6 +209,39 @@ def main():
                 img_list.append(vutils.make_grid(fake, padding=2, normalize=True))
 
             iters += 1
+
+    plt.figure(figsize=(10, 5))
+    plt.title("Generator and Discriminator Loss During Training")
+    plt.plot(g_losses,label="G")
+    plt.plot(d_losses,label="D")
+    plt.xlabel("iterations")
+    plt.ylabel("Loss")
+    plt.legend()
+    plt.show()
+
+    fig = plt.figure(figsize=(8,8))
+    plt.axis("off")
+    ims = [[plt.imshow(np.transpose(i,(1,2,0)), animated=True)] for i in img_list]
+    ani = animation.ArtistAnimation(fig, ims, interval=1000, repeat_delay=1000, blit=True)
+
+    HTML(ani.to_jshtml())
+
+# Grab a batch of real images from the dataloader
+    real_batch = next(iter(dataloader))
+
+# Plot the real images
+    plt.figure(figsize=(15,15))
+    plt.subplot(1,2,1)
+    plt.axis("off")
+    plt.title("Real Images")
+    plt.imshow(np.transpose(vutils.make_grid(real_batch[0].to(DEVICE)[:64], padding=5, normalize=True).cpu(),(1,2,0)))
+
+# Plot the fake images from the last epoch
+    plt.subplot(1,2,2)
+    plt.axis("off")
+    plt.title("Fake Images")
+    plt.imshow(np.transpose(img_list[-1],(1,2,0)))
+    plt.show()
 
 
 if __name__ == "__main__":
