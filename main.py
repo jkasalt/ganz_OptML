@@ -20,6 +20,7 @@ import numpy as np
 import argparse
 
 import models
+import optimizers
 
 DEFAULTS = {
     # Root directory for dataset
@@ -27,7 +28,7 @@ DEFAULTS = {
     # Number of workers for dataloader
     "workers": 1,
     # Batch size during training
-    "batch_size": 8,
+    "batch_size": 4,
     # Spatial size of training images. All images will be resized to this
     #   size using a transformer.
     "image_size": 64,
@@ -36,11 +37,11 @@ DEFAULTS = {
     # Size of z latent vector (i.e. size of generator input)
     "nz": 512,
     # Size of feature maps in generator
-    "ngf": 16,
+    "ngf": 32,
     # Size of feature maps in discriminator
-    "ndf": 16,
+    "ndf": 32,
     # Number of training epochs
-    "num_epochs": 4,
+    "num_epochs": 1,
     # Learning rate for optimizers
     "lr": 2e-4,
     # Beta1 hyperparam for Adam optimizers
@@ -54,7 +55,7 @@ DEVICE = torch.device(
 )
 
 
-def create_dataset(which_dataset, show=False):
+def create_dataset(which_dataset, show=False, subset=None):
     match which_dataset:
         case "mnist":
             # Then load the dataset as usual
@@ -71,7 +72,7 @@ def create_dataset(which_dataset, show=False):
                 download=True,
             )
         case _: # Default dataset is cifar10
-            dataset = torchvision.datasets.MNIST(
+            dataset = torchvision.datasets.CIFAR10(
                 DEFAULTS["dataroot"],
                 transform=transforms.Compose(
                     [
@@ -83,6 +84,8 @@ def create_dataset(which_dataset, show=False):
                 ),
                 download=True,
             )
+    if subset is not None:
+        dataset = torch.utils.data.Subset(dataset, subset)
     dataloader = torch.utils.data.DataLoader(
         dataset,
         batch_size=DEFAULTS["batch_size"],
@@ -128,7 +131,7 @@ def main():
     seed = 123
     random.seed(seed)
     torch.manual_seed(seed)
-    dataloader = create_dataset(args.dataset)
+    dataloader = create_dataset(args.dataset, subset=range(1000))
 
     ngpu = DEFAULTS["ngpu"]
 
@@ -163,12 +166,15 @@ def main():
     real_label = 1.0
     fake_label = 0.0
 
-    opti_d = optim.Adam(
-        discriminator.parameters(), lr=DEFAULTS["lr"], betas=(DEFAULTS["beta1"], 0.999)
-    )
-    opti_g = optim.Adam(
-        generator.parameters(), lr=DEFAULTS["lr"], betas=(DEFAULTS["beta1"], 0.999)
-    )
+    # opti_d = optim.Adam(
+    #     discriminator.parameters(), lr=DEFAULTS["lr"], betas=(DEFAULTS["beta1"], 0.999)
+    # )
+    # opti_g = optim.Adam(
+    #     generator.parameters(), lr=DEFAULTS["lr"], betas=(DEFAULTS["beta1"], 0.999)
+    # )
+
+    opti_d = optimizers.ExtraSGD(discriminator.parameters(), lr=DEFAULTS["lr"])
+    opti_g = optimizers.ExtraSGD(generator.parameters(), lr=DEFAULTS["lr"])
 
     # Training loop
     img_list = []
@@ -201,6 +207,8 @@ def main():
             err_d_fake.backward()
             d_g_z1 = output_d.mean().item()
             err_d = err_d_real + err_d_fake
+
+            opti_d.extrapolate()
             opti_d.step()
 
             ############################
@@ -214,6 +222,8 @@ def main():
             err_g = criterion(output, label)
             err_g.backward()
             d_g_z2 = output.mean().item()
+
+            opti_g.extrapolate()
             opti_g.step()
 
             if i % 50 == 0:
@@ -243,12 +253,13 @@ def main():
 
             iters += 1
         # At the end of an epoch we save the two networks
-        checkpoints_path = "model_checkpoints"
+        checkpoints_path = "model_checkpoints/"
         if not os.path.exists(checkpoints_path):
             os.makedirs(checkpoints_path)
         timestamp = time.strftime("%b-%d-%Y_%H%M", time.localtime())
-        torch.save(discriminator, checkpoints_path + "discr-" + str(epoch) + "-" + args.dataset + "-" + timestamp)
-        torch.save(generator, checkpoints_path + "genrt-" + str(epoch) + "-" + args.dataset + "-" + timestamp)
+        filename = lambda x: checkpoints_path + x + "-" + str(epoch) + "-" + args.dataset + "-" + timestamp + ".checkpoint"
+        torch.save(discriminator, filename("discriminator"))
+        torch.save(generator, filename("generator"))
 
 
     timestamp = time.strftime("%b-%d-%Y_%H%M", time.localtime())
@@ -272,7 +283,7 @@ def main():
     HTML(ani.to_jshtml())
 
     # Grab a batch of real images from the dataloader
-    real_batch = next(iter(dataloader))
+    real_batch, _ = next(iter(dataloader))
 
     # Plot the real images
     plt.figure(figsize=(15, 15))
