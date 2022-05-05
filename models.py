@@ -1,7 +1,7 @@
 # coding=utf-8
 
 import torch.nn as nn
-from main import SETTINGS
+from main import DEFAULTS
 
 
 def weights_init(m):
@@ -21,10 +21,10 @@ class Generator(nn.Module):
     def __init__(self, ngpu):
         super(Generator, self).__init__()
         self.ngpu = ngpu
-        ngf = SETTINGS["ngf"]
+        ngf = DEFAULTS["ngf"]
         self.main = nn.Sequential(
             # Input is Z, going into a convolution
-            nn.ConvTranspose2d(SETTINGS["nz"], ngf * 8, 4, 1, 0, bias=False),
+            nn.ConvTranspose2d(DEFAULTS["nz"], ngf * 8, 4, 1, 0, bias=False),
             nn.BatchNorm2d(ngf * 8),
             nn.ReLU(True),
             # State size: (ngf*8) x 4 x 4
@@ -40,7 +40,7 @@ class Generator(nn.Module):
             nn.BatchNorm2d(ngf),
             nn.ReLU(True),
             # State size: ngf x 32 x 32
-            nn.ConvTranspose2d(ngf, SETTINGS["nc"], 4, 2, 1, bias=False),
+            nn.ConvTranspose2d(ngf, DEFAULTS["nc"], 4, 2, 1, bias=False),
             nn.Tanh()
             # State size: nc x 64 x 64
         )
@@ -52,11 +52,11 @@ class Generator(nn.Module):
 class Discriminator(nn.Module):
     def __init__(self, ngpu):
         super(Discriminator, self).__init__()
-        ndf = SETTINGS["ndf"]
+        ndf = DEFAULTS["ndf"]
         self.ngpu = ngpu
         self.main = nn.Sequential(
             # input is (nc) x 64 x 64
-            nn.Conv2d(SETTINGS["nc"], ndf, 4, 2, 1, bias=False),
+            nn.Conv2d(DEFAULTS["nc"], ndf, 4, 2, 1, bias=False),
             nn.LeakyReLU(0.2, inplace=True),
             # state size. (ndf) x 32 x 32
             nn.Conv2d(ndf, ndf * 2, 4, 2, 1, bias=False),
