@@ -33,14 +33,19 @@ Implementation GANs
 Notebooks
 ├── notebook_convex_concave.ipynb
 ├── notebook_xAy.ipynb
-└── notebook_xy.ipynb
-
-
+├── notebook_xy.ipynb
+└── odes.ipynb
 
 README.md
 ```
 
-TODO
+The `Documentation` folder contains the report for this project, the main reference paper, and a copy of the lecture on GANs from the Machine Learning course at EPFL, since GANs are an application of min-max problems.
+
+The `Images` folder contains the pictures used in the report. These pictures can be obtained from the scripts.
+
+The  `Implementation GANs` folder contains scripts that we wrote to apply the optimizers to GANs. In particular, there is an implementation of PPM and EGM. In the end, these scripts were not used for the main study.
+
+The `Notebooks` folder contains the main notebooks used in this study. The scripts used to investigate convex-concave losses, bilinear losses, and the special case of $L(x,y) = xy$. These scripts are rather simple and can be run without any special configuration need.
 
 
 ## Authors
